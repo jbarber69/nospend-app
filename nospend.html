@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NoSpend">
+<meta name="theme-color" content="#0f1018">
+<title>NoSpend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0f1018;
+  --bg2:       #171921;
+  --bg3:       #1e2130;
+  --bg4:       #252840;
+  --accent:    #f5a623;
+  --accent2:   #ff6b6b;
+  --green:     #3dd68c;
+  --red:       #ff5c5c;
+  --text:      #eeeae0;
+  --text-dim:  #7a839e;
+  --text-muted:#3d4460;
+  --border:    #252840;
+  --border2:   #1e2130;
+  --radius:    20px;
+  --radius-sm: 14px;
+  --radius-xs: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
+#app { height: 100dvh; display: flex; flex-direction: column; position: relative; }
+
+/* animated mesh background */
+#bg-mesh {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+}
+#bg-mesh .blob {
+  position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.16;
+  will-change: transform;
+}
+#bg-mesh .blob1 { width: 340px; height: 340px; background: var(--accent); top: -10%; left: -15%; animation: float1 22s ease-in-out infinite; }
+#bg-mesh .blob2 { width: 280px; height: 280px; background: var(--green); bottom: 5%; right: -10%; animation: float2 26s ease-in-out infinite; }
+#bg-mesh .blob3 { width: 220px; height: 220px; background: var(--accent2); top: 35%; right: 10%; animation: float3 19s ease-in-out infinite; }
+#bg-mesh.mode-green .blob1 { background: var(--green); }
+#bg-mesh.mode-red .blob1 { background: var(--red); }
+@keyframes float1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(40px,60px) scale(1.15); }
+  66% { transform: translate(-20px,30px) scale(0.9); }
+}
+@keyframes float2 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-50px,-40px) scale(1.2); }
+}
+@keyframes float3 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  40% { transform: translate(30px,-50px) scale(1.1); }
+  70% { transform: translate(-40px,20px) scale(0.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #bg-mesh .blob { animation: none !important; }
+}
+
+/* grain overlay */
+#app::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none; z-index: 1000; opacity: 0.6;
+}
+#shell, #onboarding { position: relative; z-index: 1; }
+
+/* ── Onboarding ── */
+#onboarding {
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch;
+  height: 100%; padding: 0 0 max(32px, env(safe-area-inset-bottom));
+  background: radial-gradient(ellipse 120% 60% at 50% 0%, #f5a62315 0%, transparent 70%);
+}
+.ob-hero {
+  flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 16px; padding: 48px 32px 32px;
+}
+.ob-glyph {
+  width: 80px; height: 80px; background: linear-gradient(135deg, #f5a623, #ff6b6b);
+  border-radius: 24px; display: flex; align-items: center; justify-content: center;
+  font-size: 36px; box-shadow: 0 20px 60px #f5a62340;
+  animation: glyph-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes glyph-in { from { opacity: 0; transform: scale(0.5) rotate(-10deg); } }
+.ob-title {
+  font-size: 36px; font-weight: 600; letter-spacing: -1.5px; text-align: center;
+  background: linear-gradient(135deg, var(--text) 40%, var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.ob-sub { color: var(--text-dim); text-align: center; font-size: 15px; line-height: 1.6; max-width: 280px; }
+.ob-sheet {
+  background: var(--bg2); border-top: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0; padding: 28px 24px max(28px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 20px;
+}
+.ob-sheet-title { font-size: 13px; font-weight: 500; color: var(--text-dim); letter-spacing: 0.5px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.6px; text-transform: uppercase; }
+.field input, .field select {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-xs);
+  padding: 13px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px;
+  outline: none; width: 100%; transition: border-color 0.2s, background 0.2s; -webkit-appearance: none;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); background: var(--bg4); }
+.field input[type="number"] { font-family: 'DM Mono', monospace; }
+.btn {
+  background: var(--accent); color: #0f1018; border: none; border-radius: var(--radius-xs);
+  padding: 15px; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600;
+  cursor: pointer; width: 100%; transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: -0.2px;
+}
+.btn:active { opacity: 0.85; transform: scale(0.98); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+.btn-green { background: var(--green); }
+.btn-outline-green { background: transparent; border: 2px solid var(--green); color: var(--green); }
+
+/* ── Shell ── */
+#shell { display: none; flex-direction: column; height: 100%; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 12px; padding-top: max(20px, env(safe-area-inset-top));
+}
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-eyebrow { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 2px; }
+.topbar-title { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+.icon-btn {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 50%;
+  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; transition: background 0.15s;
+}
+.icon-btn:active { background: var(--bg4); }
+
+/* ── Views ── */
+.view { display: none; flex: 1; overflow-y: auto; padding: 0 20px 20px; padding-bottom: max(96px, calc(96px + env(safe-area-inset-bottom))); scroll-behavior: smooth; }
+.view.active { display: block; }
+.view::-webkit-scrollbar { display: none; }
+
+/* ── Nav ── */
+.nav {
+  display: flex; background: var(--bg2); border-top: 1px solid var(--border);
+  padding: 10px 8px; padding-bottom: max(10px, env(safe-area-inset-bottom));
+  gap: 4px;
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; padding: 8px 4px; border-radius: 12px; transition: background 0.15s;
+  position: relative;
+}
+.nav-item .nav-icon { font-size: 19px; transition: transform 0.2s; line-height: 1; }
+.nav-item .nav-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.2px; transition: color 0.2s; font-weight: 500; }
+.nav-item.active { background: var(--bg3); }
+.nav-item.active .nav-label { color: var(--accent); }
+.nav-item.active .nav-icon { transform: scale(1.1); }
+
+/* ── HOME VIEW ── */
+.period-strip {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); margin-bottom: 20px;
+}
+.ps-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.4px; margin-bottom: 2px; }
+.ps-val { font-size: 13px; font-weight: 500; }
+.ps-right { text-align: right; }
+.ps-days { font-size: 20px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--accent); }
+
+/* Hero arc area */
+.home-hero {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 0 24px; margin-bottom: 4px;
+}
+.home-hero::before {
+  content: ''; position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+  width: 280px; height: 280px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow, #f5a62310) 0%, transparent 70%);
+  pointer-events: none;
+}
+svg.arc { overflow: visible; display: block; }
+.arc-label { text-anchor: middle; dominant-baseline: middle; }
+.arc-sublabel { text-anchor: middle; }
+
+/* No-spend toggle button */
+.ns-toggle {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 16px;
+}
+.ns-toggle.active { border-color: var(--green); background: #3dd68c0a; }
+.ns-toggle .ns-icon {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--bg3);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  flex-shrink: 0; transition: background 0.2s;
+}
+.ns-toggle.active .ns-icon { background: #3dd68c20; }
+.ns-toggle .ns-text { flex: 1; text-align: left; }
+.ns-toggle .ns-title { font-size: 14px; font-weight: 500; color: var(--text); }
+.ns-toggle .ns-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.ns-toggle .ns-check {
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+  transition: background 0.2s, border-color 0.2s; color: transparent; flex-shrink: 0;
+}
+.ns-toggle.active .ns-check { background: var(--green); border-color: var(--green); color: #0f1018; }
+
+/* Stat grid */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 16px 14px; position: relative; overflow: hidden;
+}
+.stat-card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--card-accent, transparent); border-radius: 2px 2px 0 0;
+}
+.stat-card.accent-green { --card-accent: var(--green); }
+.stat-card.accent-amber { --card-accent: var(--accent); }
+.stat-card.accent-red { --card-accent: var(--red); }
+.stat-card .s-label { font-size: 10px; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; font-weight: 500; text-transform: uppercase; }
+.stat-card .s-val { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; line-height: 1; }
+.stat-card .s-val.green { color: var(--green); }
+.stat-card .s-val.red { color: var(--red); }
+.stat-card .s-val.amber { color: var(--accent); }
+.stat-card .s-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.section-title { font-size: 11px; font-weight: 500; color: var(--text-muted); letter-spacing: 0.6px; text-transform: uppercase; }
+.link-btn { font-size: 12px; color: var(--accent); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+
+.tx-list { display: flex; flex-direction: column; gap: 6px; }
+.tx-item {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+  transition: background 0.15s;
+}
+.tx-item:active { background: var(--bg3); }
+.tx-cat-icon {
+  font-size: 18px; width: 38px; height: 38px; background: var(--bg3);
+  border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.tx-detail { flex: 1; min-width: 0; }
+.tx-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-meta { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.tx-amount { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--red); }
+.tx-delete { background: none; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; padding: 6px; margin-left: 2px; border-radius: 8px; }
+.tx-delete:active { color: var(--red); background: #ff5c5c15; }
+.empty-state { text-align: center; color: var(--text-muted); font-size: 14px; padding: 32px 0; line-height: 1.6; }
+.empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+
+.add-fab {
+  position: fixed; bottom: max(90px, calc(90px + env(safe-area-inset-bottom))); right: 20px;
+  width: 54px; height: 54px; background: var(--accent); border: none; border-radius: 18px;
+  font-size: 22px; color: #0f1018; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; box-shadow: 0 6px 28px #f5a62350; z-index: 10; transition: transform 0.15s;
+  font-weight: 600;
+}
+.add-fab:active { transform: scale(0.93); }
+
+/* ── DAY VIEW ── */
+.day-nav-bar {
+  display: flex; align-items: center; gap: 0; margin-bottom: 16px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden;
+}
+.dn-btn {
+  background: none; border: none; color: var(--text-dim); font-size: 22px; cursor: pointer;
+  padding: 14px 16px; transition: color 0.15s, background 0.15s;
+}
+.dn-btn:active { background: var(--bg3); color: var(--text); }
+.dn-center { flex: 1; text-align: center; padding: 12px 0; }
+.dn-label { font-size: 15px; font-weight: 600; }
+.dn-sub { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+.day-spend-hero {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden;
+}
+.day-spend-hero::before {
+  content: ''; position: absolute; top: 0; right: 0;
+  width: 120px; height: 120px;
+  background: radial-gradient(circle at top right, var(--hero-glow, #f5a62310), transparent 70%);
+}
+.dsh-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.dsh-spent { }
+.dsh-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; }
+.dsh-amount { font-family: 'DM Mono', monospace; font-size: 34px; font-weight: 500; letter-spacing: -1px; }
+.dsh-badge {
+  font-size: 11px; padding: 5px 10px; border-radius: 99px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
+}
+.dsh-badge.ok { background: #3dd68c15; color: var(--green); }
+.dsh-badge.warn { background: #f5a62315; color: var(--accent); }
+.dsh-badge.over { background: #ff5c5c15; color: var(--red); }
+.dsh-budget { text-align: right; }
+.dsh-b-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; }
+.dsh-b-val { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; color: var(--text-dim); }
+.bar-track { height: 5px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+.bar-fill.ok { background: linear-gradient(90deg, var(--green), #3dd68ca0); }
+.bar-fill.warn { background: linear-gradient(90deg, var(--accent), #f5a62380); }
+.bar-fill.over { background: linear-gradient(90deg, var(--red), #ff5c5c80); }
+
+.cat-breakdown { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.cat-row {
+  display: flex; align-items: center; gap: 10px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 11px 12px;
+}
+.cr-icon { font-size: 16px; width: 28px; text-align: center; flex-shrink: 0; }
+.cr-name { flex: 1; font-size: 13px; font-weight: 500; }
+.cr-bar { flex: 2; height: 3px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+.cr-bar-fill { height: 100%; background: var(--red); border-radius: 99px; opacity: 0.6; }
+.cr-amt { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--red); min-width: 50px; text-align: right; }
+
+/* ── WEEK VIEW ── */
+.week-header { margin-bottom: 16px; }
+.week-range { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+.week-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+.kpi-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px 12px; text-align: center;
+}
+.kpi-card .kv { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; line-height: 1; }
+.kpi-card .kl { font-size: 10px; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.4px; text-transform: uppercase; }
+.week-days { display: flex; flex-direction: column; gap: 6px; }
+.week-row {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 13px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+  transition: border-color 0.15s; position: relative; overflow: hidden;
+}
+.week-row.today-row { border-color: var(--accent); }
+.week-row.nospend-row { border-color: var(--green); }
+.week-row.over-row { border-color: var(--red); }
+.wr-day { width: 40px; flex-shrink: 0; }
+.wr-dayname { font-size: 10px; color: var(--text-muted); letter-spacing: 0.4px; font-weight: 500; text-transform: uppercase; }
+.wr-date { font-size: 20px; font-weight: 600; font-family: 'DM Mono', monospace; line-height: 1.1; margin-top: 1px; }
+.wr-body { flex: 1; }
+.wr-bar-wrap { margin-bottom: 5px; }
+.wr-label { font-size: 11px; color: var(--text-dim); }
+.wr-right { text-align: right; flex-shrink: 0; }
+.wr-amt { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; }
+.wr-tag { font-size: 10px; padding: 3px 8px; border-radius: 99px; margin-top: 4px; display: inline-block; font-weight: 500; }
+.wr-tag.ns { background: #3dd68c15; color: var(--green); }
+.wr-tag.ov { background: #ff5c5c15; color: var(--red); }
+.wr-tag.future { background: var(--bg3); color: var(--text-muted); }
+.wr-tag.ok { background: #f5a62310; color: var(--accent); }
+
+/* ── MONTH VIEW ── */
+.month-budget-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 22px 20px; margin-bottom: 16px; position: relative; overflow: hidden;
+}
+.month-budget-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
+  background: linear-gradient(to top, var(--bg2), transparent);
+}
+.mbc-eyebrow { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 10px; text-transform: uppercase; }
+.mbc-main { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 16px; }
+.mbc-val { font-family: 'DM Mono', monospace; font-size: 40px; font-weight: 500; letter-spacing: -2px; line-height: 1; }
+.mbc-pct { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text-dim); padding-bottom: 6px; }
+.mbc-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 14px; }
+.month-kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+.mkpi { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+.mkpi-label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
+.mkpi-val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; }
+.mkpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.cat-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.cl-row { display: flex; align-items: center; gap: 10px; }
+.cl-icon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+.cl-name { font-size: 13px; flex: 1; }
+.cl-bar { flex: 2; height: 4px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+.cl-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; }
+.cl-amt { font-family: 'DM Mono', monospace; font-size: 13px; min-width: 52px; text-align: right; color: var(--text-dim); }
+.period-dots { display: flex; gap: 5px; flex-wrap: wrap; }
+.pd { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text-muted); background: var(--bg2); border: 1px solid var(--border); cursor: pointer; transition: border-color 0.15s; font-weight: 500; }
+.pd.spent { background: #ff5c5c10; border-color: #ff5c5c30; color: var(--red); }
+.pd.nospend { background: #3dd68c10; border-color: #3dd68c30; color: var(--green); }
+.pd.today { border-color: var(--accent); color: var(--accent); }
+.pd.future { opacity: 0.35; }
+
+/* ── SETTINGS ── */
+.settings-group { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 14px; }
+.sg-header { padding: 12px 16px 8px; font-size: 10px; color: var(--text-muted); letter-spacing: 0.6px; font-weight: 500; text-transform: uppercase; }
+.sg-row { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border2); gap: 12px; }
+.sg-label { font-size: 15px; }
+.sg-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.sg-input { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; max-width: 130px; text-align: right; transition: border-color 0.2s; }
+.sg-input:focus { border-color: var(--accent); }
+select.sg-input { -webkit-appearance: none; }
+.cat-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px 16px 14px; }
+.cat-chip { display: flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 99px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.cc-del { color: var(--red); font-size: 14px; line-height: 1; margin-left: 2px; }
+.add-cat { display: flex; gap: 8px; padding: 0 16px 14px; }
+.add-cat input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; }
+.add-cat input:focus { border-color: var(--accent); }
+.add-cat-emoji { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+.add-cat-btn { background: var(--accent); border: none; border-radius: 8px; padding: 9px 14px; color: #0f1018; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; flex-shrink: 0; }
+.notif-banner { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 12px 14px; font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px; }
+.notif-banner strong { color: var(--accent); font-weight: 500; }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: #00000090; z-index: 200; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity 0.22s; backdrop-filter: blur(4px); }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-sheet { background: var(--bg2); border-radius: 24px 24px 0 0; border: 1px solid var(--border); border-bottom: none; padding: 20px 20px max(24px, env(safe-area-inset-bottom)); width: 100%; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+.modal-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; letter-spacing: -0.3px; }
+.modal-fields { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions .btn { flex: 1; }
+.amount-input-wrap { position: relative; }
+.amount-input-wrap::before { content: '£'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 16px; pointer-events: none; }
+.amount-input-wrap input { padding-left: 30px; }
+.cat-select-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+.cat-sel-btn { display: flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 99px; padding: 7px 12px; font-size: 13px; cursor: pointer; color: var(--text); font-family: 'DM Sans', sans-serif; transition: border-color 0.15s, background 0.15s; }
+.cat-sel-btn.selected { border-color: var(--accent); background: #f5a62312; }
+select option { background: var(--bg2); }
+
+/* ── Gamification: Savings hero ── */
+.savings-hero {
+  position: relative; background: linear-gradient(160deg, var(--bg2) 0%, var(--bg3) 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 22px 20px; margin-bottom: 18px; overflow: hidden;
+}
+.savings-hero::before {
+  content: ''; position: absolute; top: -40%; right: -20%; width: 220px; height: 220px;
+  background: radial-gradient(circle, #3dd68c25 0%, transparent 70%);
+  pointer-events: none; animation: pulse-glow 4s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%,100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+.sh-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.sh-eyebrow { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 500; }
+.sh-streak {
+  display: flex; align-items: center; gap: 5px; background: #f5a62315; border: 1px solid #f5a62330;
+  border-radius: 99px; padding: 4px 10px 4px 8px; font-size: 12px; font-weight: 600; color: var(--accent);
+}
+.sh-streak.lit { animation: streak-pop 0.5s ease; }
+@keyframes streak-pop { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.sh-value-row { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 6px; }
+.sh-value { font-family: 'DM Mono', monospace; font-size: 38px; font-weight: 500; letter-spacing: -1.5px; color: var(--green); line-height: 1; }
+.sh-value.negative { color: var(--red); }
+.sh-caption { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.sh-caption strong { color: var(--text); font-weight: 500; }
+
+/* Milestone progress */
+.milestone-track {
+  display: flex; align-items: center; gap: 2px; margin-top: 16px; position: relative;
+}
+.milestone-bar-bg { flex: 1; height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+.milestone-bar-fill {
+  height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--green), #3dd68cbb);
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1); position: relative;
+}
+.milestone-bar-fill::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 12px;
+  background: radial-gradient(circle, #fff6 0%, transparent 70%);
+}
+.milestone-labels { display: flex; justify-content: space-between; margin-top: 6px; }
+.milestone-label { font-size: 10px; color: var(--text-muted); }
+.milestone-label.reached { color: var(--green); font-weight: 600; }
+
+/* Streak flame row on home */
+.streak-row {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.streak-pip {
+  flex: 1; height: 6px; border-radius: 99px; background: var(--bg3);
+  position: relative; overflow: hidden;
+}
+.streak-pip.lit { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+/* Badge toast */
+.badge-toast {
+  position: fixed; top: max(20px, env(safe-area-inset-top)); left: 50%;
+  transform: translateX(-50%) translateY(-120%); z-index: 300;
+  background: var(--bg4); border: 1px solid var(--accent); border-radius: 99px;
+  padding: 10px 18px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 10px 40px #000a; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+.badge-toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Level chip on topbar */
+.level-chip {
+  display: flex; align-items: center; gap: 5px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 99px; padding: 5px 10px; font-size: 11px; font-weight: 600; color: var(--accent);
+}
+.mt8 { margin-top: 8px; }
+.mt16 { margin-top: 16px; }
+.mb16 { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div id="bg-mesh">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+</div>
+<div id="app">
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="ob-hero">
+    <div class="ob-glyph">💸</div>
+    <div class="ob-title">NoSpend</div>
+    <div class="ob-sub">Track your financial month, one day at a time. Know exactly where you stand.</div>
+  </div>
+  <div class="ob-sheet">
+    <div class="ob-sheet-title">To get started, we need two things</div>
+    <div class="field">
+      <label>Payday date</label>
+      <select id="ob-payday"><option value="">Select day of month</option></select>
+    </div>
+    <div class="field">
+      <label>Monthly budget</label>
+      <div class="amount-input-wrap">
+        <input type="number" id="ob-budget" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+      </div>
+    </div>
+    <button class="btn" onclick="finishOnboarding()">Set up NoSpend →</button>
+  </div>
+</div>
+
+<!-- MAIN SHELL -->
+<div id="shell">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-eyebrow" id="topbar-eyebrow">NOSPEND</div>
+      <div class="topbar-title" id="topbar-title">Today</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div class="icon-btn" onclick="openAddTx()" id="topbar-add-btn" title="Add transaction">＋</div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="view active" id="view-home">
+    <div class="period-strip">
+      <div>
+        <div class="ps-label">PAY PERIOD</div>
+        <div class="ps-val" id="home-period"></div>
+      </div>
+      <div class="ps-right">
+        <div class="ps-label">DAYS LEFT</div>
+        <div class="ps-days" id="home-days-left"></div>
+      </div>
+    </div>
+
+    <div class="savings-hero">
+      <div class="sh-top">
+        <div class="sh-eyebrow">Saved so far this period</div>
+        <div class="sh-streak" id="sh-streak-badge">🔥 <span id="sh-streak-count">0</span> day streak</div>
+      </div>
+      <div class="sh-value-row">
+        <div class="sh-value" id="sh-value">£0.00</div>
+      </div>
+      <div class="sh-caption" id="sh-caption">Stay under budget to grow this number.</div>
+      <div class="milestone-track">
+        <div class="milestone-bar-bg"><div class="milestone-bar-fill" id="milestone-bar"></div></div>
+      </div>
+      <div class="milestone-labels">
+        <div class="milestone-label" id="ml-0">£0</div>
+        <div class="milestone-label" id="ml-1"></div>
+        <div class="milestone-label" id="ml-2"></div>
+      </div>
+    </div>
+
+    <div class="home-hero">
+      <svg class="arc" width="240" height="148" viewBox="0 0 240 148">
+        <defs>
+          <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#3dd68c"/>
+            <stop offset="100%" stop-color="#3dd68c80"/>
+          </linearGradient>
+          <linearGradient id="arcGradWarn" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f5a623"/>
+            <stop offset="100%" stop-color="#f5a62380"/>
+          </linearGradient>
+          <linearGradient id="arcGradOver" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ff5c5c"/>
+            <stop offset="100%" stop-color="#ff5c5c80"/>
+          </linearGradient>
+          <filter id="arcGlow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <path id="arc-bg" stroke="#1e2130" stroke-width="12" fill="none" stroke-linecap="round"/>
+        <path id="arc-fill" stroke="url(#arcGrad)" stroke-width="12" fill="none" stroke-linecap="round" filter="url(#arcGlow)"/>
+        <text id="arc-amt" x="120" y="98" fill="#eeeae0" font-family="DM Mono,monospace" font-size="32" font-weight="500" text-anchor="middle"></text>
+        <text id="arc-label" x="120" y="124" fill="#7a839e" font-family="DM Sans,sans-serif" font-size="12" text-anchor="middle"></text>
+      </svg>
+    </div>
+
+    <!-- No-spend toggle -->
+    <div class="ns-toggle" id="home-ns-toggle" onclick="toggleNoSpendToday()">
+      <div class="ns-icon" id="home-ns-icon">✨</div>
+      <div class="ns-text">
+        <div class="ns-title" id="home-ns-title">Mark today as no spend</div>
+        <div class="ns-sub" id="home-ns-sub">Confirm you spent nothing today</div>
+      </div>
+      <div class="ns-check" id="home-ns-check">✓</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card accent-amber">
+        <div class="s-label">TODAY'S BUDGET</div>
+        <div class="s-val amber" id="home-daily-budget"></div>
+        <div class="s-sub">daily allowance</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">SPENT TODAY</div>
+        <div class="s-val" id="home-spent-today"></div>
+        <div class="s-sub" id="home-spent-status"></div>
+      </div>
+      <div class="stat-card accent-green">
+        <div class="s-label">PERIOD REMAINING</div>
+        <div class="s-val green" id="home-month-rem"></div>
+        <div class="s-sub">of budget left</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-label">NO SPEND DAYS</div>
+        <div class="s-val" id="home-nospend-days" style="color:var(--green)"></div>
+        <div class="s-sub">this period</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">Today's transactions</div>
+      <button class="link-btn" onclick="switchView('day')">See all →</button>
+    </div>
+    <div class="tx-list" id="home-tx-list"></div>
+  </div>
+
+  <!-- DAY -->
+  <div class="view" id="view-day">
+    <div class="day-nav-bar">
+      <button class="dn-btn" onclick="dayNav(-1)">‹</button>
+      <div class="dn-center">
+        <div class="dn-label" id="day-label"></div>
+        <div class="dn-sub" id="day-sub"></div>
+      </div>
+      <button class="dn-btn" onclick="dayNav(1)">›</button>
+    </div>
+
+    <div class="day-spend-hero" id="day-hero">
+      <div class="dsh-top">
+        <div class="dsh-spent">
+          <div class="dsh-label">SPENT</div>
+          <div class="dsh-amount" id="day-spent-val"></div>
+          <div class="dsh-badge" id="day-badge"></div>
+        </div>
+        <div class="dsh-budget">
+          <div class="dsh-b-label">DAILY BUDGET</div>
+          <div class="dsh-b-val" id="day-budget-val"></div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="day-bar"></div></div>
+    </div>
+
+    <!-- No spend toggle for day view -->
+    <div class="ns-toggle" id="day-ns-toggle" onclick="toggleNoSpend()">
+      <div class="ns-icon" id="day-ns-icon">✨</div>
+      <div class="ns-text">
+        <div class="ns-title" id="day-ns-title">Mark as no spend day</div>
+        <div class="ns-sub" id="day-ns-sub">Confirm nothing was spent</div>
+      </div>
+      <div class="ns-check" id="day-ns-check">✓</div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">By category</div>
+    </div>
+    <div class="cat-breakdown" id="day-cat-breakdown"></div>
+
+    <div class="section-head mt16">
+      <div class="section-title">Transactions</div>
+      <button class="link-btn" onclick="openAddTxOnDay()">+ Add</button>
+    </div>
+    <div class="tx-list" id="day-tx-list"></div>
+  </div>
+
+  <!-- WEEK -->
+  <div class="view" id="view-week">
+    <div class="week-kpi-row" id="week-kpis"></div>
+    <div class="section-head">
+      <div class="section-title" id="week-range-label"></div>
+    </div>
+    <div class="week-days" id="week-days"></div>
+  </div>
+
+  <!-- MONTH -->
+  <div class="view" id="view-month">
+    <div class="month-budget-card">
+      <div class="mbc-eyebrow">PERIOD BUDGET REMAINING</div>
+      <div class="mbc-main">
+        <div class="mbc-val" id="month-rem-val"></div>
+        <div class="mbc-pct" id="month-rem-pct"></div>
+      </div>
+      <div class="mbc-sub" id="month-rem-sub"></div>
+      <div class="bar-track" style="height:6px"><div class="bar-fill ok" id="month-bar"></div></div>
+    </div>
+    <div class="month-kpi-row" id="month-kpis"></div>
+    <div class="section-head">
+      <div class="section-title">Spending by category</div>
+    </div>
+    <div class="cat-list" id="month-cat-list"></div>
+    <div class="section-head">
+      <div class="section-title">Period overview</div>
+    </div>
+    <div class="period-dots" id="month-dots"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <div class="notif-banner" id="notif-banner"></div>
+    <div class="settings-group">
+      <div class="sg-header">Financial month</div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Payday date</div>
+          <div class="sg-sub" id="st-payday-sub"></div>
+        </div>
+        <select class="sg-input" id="st-payday" onchange="saveSetting('payday',this.value)"></select>
+      </div>
+      <div class="sg-row">
+        <div class="sg-label">Monthly budget</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <span style="color:var(--text-dim);font-family:'DM Mono',monospace;font-size:14px">£</span>
+          <input class="sg-input" type="number" id="st-budget" onchange="saveSetting('budget',this.value)" step="0.01" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="sg-header">Notifications</div>
+      <div class="sg-row">
+        <div>
+          <div class="sg-label">Daily reminder</div>
+          <div class="sg-sub">Prompt to log transactions</div>
+        </div>
+        <input class="sg-input" type="time" id="st-notif-time" onchange="saveSetting('notifTime',this.value)">
+      </div>
+      <div class="sg-row">
+        <button class="btn" style="max-width:200px;padding:11px;font-size:14px" onclick="requestNotifPermission()">Enable notifications</button>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="sg-header">Categories</div>
+      <div class="cat-chips" id="cat-chips"></div>
+      <div class="add-cat">
+        <span class="add-cat-emoji" id="emoji-pick" onclick="cycleEmoji()">🛒</span>
+        <input type="text" id="new-cat-name" placeholder="Category name" maxlength="24">
+        <button class="add-cat-btn" onclick="addCategory()">Add</button>
+      </div>
+    </div>
+    <div class="settings-group">
+      <div class="sg-header">Data</div>
+      <div class="sg-row" style="cursor:pointer" onclick="confirmReset()">
+        <div class="sg-label" style="color:var(--red)">Reset all data</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-item active" data-view="home" onclick="switchView('home')">
+      <div class="nav-icon">◎</div>
+      <div class="nav-label">Today</div>
+    </div>
+    <div class="nav-item" data-view="day" onclick="switchView('day')">
+      <div class="nav-icon">📋</div>
+      <div class="nav-label">Day</div>
+    </div>
+    <div class="nav-item" data-view="week" onclick="switchView('week')">
+      <div class="nav-icon">📅</div>
+      <div class="nav-label">Week</div>
+    </div>
+    <div class="nav-item" data-view="month" onclick="switchView('month')">
+      <div class="nav-icon">📊</div>
+      <div class="nav-label">Month</div>
+    </div>
+    <div class="nav-item" data-view="settings" onclick="switchView('settings')">
+      <div class="nav-icon">⚙️</div>
+      <div class="nav-label">Settings</div>
+    </div>
+  </nav>
+</div>
+
+<!-- ADD TRANSACTION MODAL -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add transaction</div>
+    <div class="modal-fields">
+      <div class="field">
+        <label>Amount</label>
+        <div class="amount-input-wrap">
+          <input type="number" id="tx-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+        </div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="tx-desc" placeholder="What did you spend on?" maxlength="60">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <div class="cat-select-grid" id="tx-cat-grid"></div>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="tx-date">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveTransaction()">Save</button>
+    </div>
+  </div>
+</div>
+
+</div>
+<div class="badge-toast" id="badge-toast">🎉 <span id="badge-toast-text"></span></div>
+<button class="add-fab" id="add-fab" onclick="openAddTx()" style="display:none">＋</button>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+const DEFAULT_CATS = [
+  {name:'Groceries',emoji:'🛒'},{name:'Transport',emoji:'🚌'},
+  {name:'Eating out',emoji:'🍕'},{name:'Coffee',emoji:'☕'},
+  {name:'Health',emoji:'💊'},{name:'Household',emoji:'🏠'},
+  {name:'Clothing',emoji:'👕'},{name:'Entertainment',emoji:'🎬'},
+  {name:'Other',emoji:'📦'},
+];
+const EMOJIS = ['🛒','🚌','🍕','☕','💊','🏠','👕','🎬','📦','🐶','🎮','📚','✈️','🎁','🏋️','🌿','🔧','💇','🍺','🛁'];
+let emojiIdx = 0;
+
+let state = {
+  payday: 27, budget: 2000,
+  categories: [...DEFAULT_CATS],
+  transactions: [],
+  noSpendDays: [], // array of YYYY-MM-DD strings explicitly marked no-spend
+  notifTime: '21:00',
+};
+
+function loadState() {
+  const s = localStorage.getItem('nospend2_state');
+  if (s) state = {...state, ...JSON.parse(s)};
+  if (!state.noSpendDays) state.noSpendDays = [];
+}
+function saveState() { localStorage.setItem('nospend2_state', JSON.stringify(state)); }
+function isSetup() { return !!localStorage.getItem('nospend2_state'); }
+
+// ── Bank Holidays (England/Wales) ──────────────────────────
+const BANK_HOLIDAYS = new Set([
+  '2024-01-01','2024-03-29','2024-04-01','2024-05-06','2024-05-27','2024-08-26','2024-12-25','2024-12-26',
+  '2025-01-01','2025-04-18','2025-04-21','2025-05-05','2025-05-26','2025-08-25','2025-12-25','2025-12-26',
+  '2026-01-01','2026-04-03','2026-04-06','2026-05-04','2026-05-25','2026-08-31','2026-12-25','2026-12-28',
+  '2027-01-01','2027-03-26','2027-03-29','2027-05-03','2027-05-31','2027-08-30','2027-12-27','2027-12-28',
+]);
+function isBH(d) { return BANK_HOLIDAYS.has(fmtDate(d)); }
+function isWE(d) { return d.getDay()===0||d.getDay()===6; }
+function isNWD(d) { return isWE(d)||isBH(d); }
+function prevWD(d) { let r=new Date(d); do{r.setDate(r.getDate()-1);}while(isNWD(r)); return r; }
+function actualPayday(yr,mo,nomDay) {
+  const dim=new Date(yr,mo+1,0).getDate();
+  let d=new Date(yr,mo,Math.min(nomDay,dim));
+  while(isNWD(d)) d=prevWD(d);
+  return d;
+}
+
+// ── Period ─────────────────────────────────────────────────
+function getPeriod() {
+  const now=new Date(), yr=now.getFullYear(), mo=now.getMonth();
+  const thisPay=actualPayday(yr,mo,state.payday);
+  const prevPay=actualPayday(mo===0?yr-1:yr,mo===0?11:mo-1,state.payday);
+  const nextPay=actualPayday(mo===11?yr+1:yr,mo===11?0:mo+1,state.payday);
+  let start,end;
+  if(now<thisPay){start=prevPay;end=new Date(thisPay);end.setDate(end.getDate()-1);}
+  else{start=thisPay;end=new Date(nextPay);end.setDate(end.getDate()-1);}
+  return{start,end};
+}
+function getDaysInPeriod() {
+  const{start,end}=getPeriod(),days=[];
+  let cur=new Date(start);
+  while(cur<=end){days.push(new Date(cur));cur.setDate(cur.getDate()+1);}
+  return days;
+}
+
+// ── Date helpers ───────────────────────────────────────────
+function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function parseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function today(){return fmtDate(new Date());}
+function fmt(d){return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});}
+function fmtLong(d){return d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});}
+function fmtMoney(n){return'£'+Math.abs(n).toFixed(2);}
+function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+// ── Budget logic ───────────────────────────────────────────
+function getSpentOnDate(ds){return state.transactions.filter(t=>t.date===ds).reduce((a,t)=>a+t.amount,0);}
+function isNoSpendDay(ds){
+  // No spend = explicitly marked OR (no transactions and explicitly marked)
+  const hasTransactions=state.transactions.some(t=>t.date===ds);
+  const markedNS=state.noSpendDays.includes(ds);
+  return markedNS&&!hasTransactions;
+}
+function dayIsNoSpend(ds) {
+  // True if marked no-spend and no transactions, or just has zero spend recorded
+  if(state.noSpendDays.includes(ds)) return!state.transactions.some(t=>t.date===ds);
+  return false;
+}
+function getDynamicDailyBudget(){
+  const days=getDaysInPeriod(),todayStr=today();
+  const{start}=getPeriod();
+  const spentSoFar=state.transactions.filter(t=>t.date<todayStr&&t.date>=fmtDate(start)).reduce((a,t)=>a+t.amount,0);
+  const remaining=days.filter(d=>fmtDate(d)>=todayStr);
+  return remaining.length>0?(state.budget-spentSoFar)/remaining.length:0;
+}
+function getPeriodSpend(){
+  const{start,end}=getPeriod();
+  return state.transactions.filter(t=>{const d=parseDate(t.date);return d>=start&&d<=end;}).reduce((a,t)=>a+t.amount,0);
+}
+function getNoSpendCount(){
+  const days=getDaysInPeriod(),todayStr=today();
+  return days.filter(d=>{
+    const ds=fmtDate(d);
+    if(ds>todayStr)return false;
+    return getSpentOnDate(ds)===0&&state.noSpendDays.includes(ds);
+  }).length;
+}
+
+// ── Gamification ───────────────────────────────────────────
+function getCurrentStreak(){
+  // Consecutive no-spend days ending yesterday or today, walking backwards
+  const todayStr=today();
+  let streak=0;
+  let cursor=new Date();
+  // include today only if already marked no-spend or has zero spend logged as no-spend
+  while(true){
+    const ds=fmtDate(cursor);
+    const spent=getSpentOnDate(ds);
+    const marked=state.noSpendDays.includes(ds);
+    if(ds===todayStr){
+      if(marked&&spent===0){streak++;cursor.setDate(cursor.getDate()-1);continue;}
+      else break;
+    }
+    if(marked&&spent===0){streak++;cursor.setDate(cursor.getDate()-1);}
+    else break;
+  }
+  return streak;
+}
+function getSavedSoFar(){
+  // "Saved" = pace-budget for elapsed days minus actual spend (positive = ahead of plan)
+  const{start}=getPeriod();
+  const todayStr=today();
+  const days=getDaysInPeriod();
+  const elapsedIncToday=days.filter(d=>fmtDate(d)<=todayStr);
+  const perDayPace=state.budget/days.length;
+  const expectedSpend=perDayPace*elapsedIncToday.length;
+  const actualSpend=state.transactions.filter(t=>{const d=parseDate(t.date);return d>=start&&d<=parseDate(todayStr);}).reduce((a,t)=>a+t.amount,0);
+  return expectedSpend-actualSpend;
+}
+let lastStreakSeen=null;
+let lastMilestoneSeen=null;
+function renderGamification(){
+  const saved=getSavedSoFar();
+  const streak=getCurrentStreak();
+  const valEl=document.getElementById('sh-value');
+  valEl.textContent=(saved<0?'-':'')+fmtMoney(saved);
+  valEl.className='sh-value'+(saved<0?' negative':'');
+  document.getElementById('sh-caption').innerHTML=
+    saved>=0
+      ?`You're <strong>${fmtMoney(saved)}</strong> ahead of pace. Keep going.`
+      :`You're <strong>${fmtMoney(saved)}</strong> behind pace — small no-spend days help catch up.`;
+
+  document.getElementById('sh-streak-count').textContent=streak;
+  const streakBadge=document.getElementById('sh-streak-badge');
+  if(streak!==lastStreakSeen&&lastStreakSeen!==null&&streak>lastStreakSeen){
+    streakBadge.classList.remove('lit');void streakBadge.offsetWidth;streakBadge.classList.add('lit');
+    if(streak>0&&streak%3===0)showBadgeToast(`${streak} day no-spend streak!`);
+  }
+  lastStreakSeen=streak;
+
+  // Milestones at 25/50/100% of budget saved
+  const milestones=[0,state.budget*0.25,state.budget*0.5];
+  const m1=state.budget*0.25,m2=state.budget*0.5;
+  const pct=Math.max(0,Math.min(saved/m2,1));
+  document.getElementById('milestone-bar').style.width=(pct*100).toFixed(1)+'%';
+  document.getElementById('ml-1').textContent=fmtMoney(m1);
+  document.getElementById('ml-1').className='milestone-label'+(saved>=m1?' reached':'');
+  document.getElementById('ml-2').textContent=fmtMoney(m2);
+  document.getElementById('ml-2').className='milestone-label'+(saved>=m2?' reached':'');
+  document.getElementById('ml-0').className='milestone-label reached';
+
+  const milestoneKey=saved>=m2?'half':saved>=m1?'quarter':null;
+  if(milestoneKey&&milestoneKey!==lastMilestoneSeen&&lastMilestoneSeen!==undefined){
+    if(lastMilestoneSeen!==null)showBadgeToast(milestoneKey==='half'?'Halfway to your savings milestone!':'25% savings milestone reached!');
+  }
+  lastMilestoneSeen=milestoneKey;
+
+  // Mesh mood shift
+  const mesh=document.getElementById('bg-mesh');
+  mesh.classList.remove('mode-green','mode-red');
+  if(saved>0)mesh.classList.add('mode-green');
+  else if(saved<-10)mesh.classList.add('mode-red');
+}
+let badgeToastTimer=null;
+function showBadgeToast(text){
+  const toast=document.getElementById('badge-toast');
+  document.getElementById('badge-toast-text').textContent=text;
+  toast.classList.add('show');
+  if(badgeToastTimer)clearTimeout(badgeToastTimer);
+  badgeToastTimer=setTimeout(()=>toast.classList.remove('show'),2800);
+}
+
+// ── No Spend toggle ────────────────────────────────────────
+function toggleNoSpendToday(){toggleNoSpend(today());}
+function toggleNoSpend(ds){
+  const dateStr=ds||currentDayStr;
+  const idx=state.noSpendDays.indexOf(dateStr);
+  if(idx>=0){state.noSpendDays.splice(idx,1);}else{state.noSpendDays.push(dateStr);}
+  saveState();renderAll();
+}
+function updateNsToggle(toggleEl,iconEl,titleEl,subEl,checkEl,dateStr){
+  const isMarked=state.noSpendDays.includes(dateStr);
+  const hasTx=state.transactions.some(t=>t.date===dateStr);
+  if(isMarked&&!hasTx){
+    toggleEl.classList.add('active');
+    iconEl.textContent='🌿';
+    titleEl.textContent='No spend day ✓';
+    subEl.textContent='Tap to unmark';
+    checkEl.textContent='✓';
+  }else if(hasTx){
+    toggleEl.classList.remove('active');
+    iconEl.textContent='📝';
+    titleEl.textContent=hasTx?'Transactions logged':'Mark as no spend day';
+    subEl.textContent=hasTx?'Unlog all transactions to mark as no spend':'Confirm nothing was spent';
+    checkEl.textContent='';
+  }else{
+    toggleEl.classList.remove('active');
+    iconEl.textContent='✨';
+    titleEl.textContent='Mark as no spend day';
+    subEl.textContent='Confirm nothing was spent';
+    checkEl.textContent='';
+  }
+}
+
+// ── Onboarding ─────────────────────────────────────────────
+function populatePaydaySelect(el){
+  el.innerHTML='<option value="">Select day</option>';
+  for(let i=1;i<=31;i++){const o=document.createElement('option');o.value=i;o.textContent=ordinal(i);el.appendChild(o);}
+}
+populatePaydaySelect(document.getElementById('ob-payday'));
+
+function finishOnboarding(){
+  const pd=parseInt(document.getElementById('ob-payday').value);
+  const bud=parseFloat(document.getElementById('ob-budget').value);
+  if(!pd||!bud||bud<=0){alert('Please fill in both fields.');return;}
+  state.payday=pd;state.budget=bud;
+  saveState();showShell();
+}
+
+// ── Shell ──────────────────────────────────────────────────
+function showShell(){
+  document.getElementById('onboarding').style.display='none';
+  document.getElementById('shell').style.display='flex';
+  document.getElementById('add-fab').style.display='flex';
+  renderAll();requestNotifOnFirstLaunch();
+}
+
+let currentView='home';
+let currentDayStr=today();
+
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelector('[data-view="'+name+'"]').classList.add('active');
+  currentView=name;
+  const titles={home:'Today',day:'Day view',week:'This week',month:'Period',settings:'Settings'};
+  document.getElementById('topbar-title').textContent=titles[name];
+  renderAll();
+}
+
+function renderAll(){
+  renderHome();renderDay();renderWeek();renderMonth();renderSettings();renderGamification();
+}
+
+// ── HOME ───────────────────────────────────────────────────
+function renderHome(){
+  const{start,end}=getPeriod();
+  const todayStr=today();
+  const spentToday=getSpentOnDate(todayStr);
+  const daily=getDynamicDailyBudget();
+  const monthRem=state.budget-getPeriodSpend();
+  const nsCount=getNoSpendCount();
+  const daysLeft=getDaysInPeriod().filter(d=>fmtDate(d)>=todayStr).length;
+
+  document.getElementById('home-period').textContent=fmt(start)+' – '+fmt(end);
+  document.getElementById('home-days-left').textContent=daysLeft;
+
+  // Arc
+  const pct=Math.min(spentToday/Math.max(daily,0.01),1);
+  drawArc(pct,spentToday,daily);
+
+  // No-spend toggle
+  updateNsToggle(
+    document.getElementById('home-ns-toggle'),
+    document.getElementById('home-ns-icon'),
+    document.getElementById('home-ns-title'),
+    document.getElementById('home-ns-sub'),
+    document.getElementById('home-ns-check'),
+    todayStr
+  );
+
+  const spEl=document.getElementById('home-spent-today');
+  spEl.textContent=fmtMoney(spentToday);
+  spEl.className='s-val '+(spentToday===0?'green':spentToday>daily?'red':'');
+  document.getElementById('home-spent-status').textContent=
+    spentToday===0?'nothing yet':spentToday>daily?'over today\'s budget':'under budget';
+  document.getElementById('home-daily-budget').textContent=fmtMoney(daily);
+  document.getElementById('home-month-rem').textContent=fmtMoney(monthRem);
+  document.getElementById('home-nospend-days').textContent=nsCount;
+
+  const txs=state.transactions.filter(t=>t.date===todayStr);
+  const list=document.getElementById('home-tx-list');
+  if(txs.length===0){
+    list.innerHTML='<div class="empty-state"><div class="empty-icon">🌿</div>Nothing logged yet today</div>';
+  }else{
+    list.innerHTML='';txs.forEach(t=>list.appendChild(makeTxEl(t,false)));
+  }
+}
+
+function drawArc(pct,spent,daily){
+  const cx=120,cy=132,r=96,startA=Math.PI+0.22,endA=2*Math.PI-0.22;
+  const sweep=endA-startA;
+  function pt(a){return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
+  const s=pt(startA),e=pt(endA);
+  document.getElementById('arc-bg').setAttribute('d',`M${s.x} ${s.y} A${r} ${r} 0 1 1 ${e.x} ${e.y}`);
+  const fa=startA+sweep*pct,fe=pt(fa),la=sweep*pct>Math.PI?1:0;
+  const fill=document.getElementById('arc-fill');
+  if(pct>0){
+    fill.setAttribute('d',`M${s.x} ${s.y} A${r} ${r} 0 ${la} 1 ${fe.x} ${fe.y}`);
+    const gradId=pct>=1?'arcGradOver':pct>0.8?'arcGradWarn':'arcGrad';
+    fill.setAttribute('stroke',`url(#${gradId})`);
+  }else{
+    fill.setAttribute('d','');
+  }
+  const rem=Math.max(daily-spent,0);
+  document.getElementById('arc-amt').textContent=fmtMoney(rem);
+  document.getElementById('arc-label').textContent=spent===0?'no spend today':'remaining today';
+}
+
+// ── DAY ────────────────────────────────────────────────────
+function dayNav(dir){
+  const d=parseDate(currentDayStr);d.setDate(d.getDate()+dir);
+  currentDayStr=fmtDate(d);renderDay();
+}
+function openAddTxOnDay(){openAddTx(currentDayStr);}
+
+function renderDay(){
+  const d=parseDate(currentDayStr),ds=currentDayStr,todayStr=today();
+  document.getElementById('day-label').textContent=fmtLong(d);
+  const{start,end}=getPeriod();
+  const inPeriod=d>=start&&d<=end;
+  document.getElementById('day-sub').textContent=inPeriod?'Current pay period':'Outside current period';
+
+  const spent=getSpentOnDate(ds);
+  const daily=getDynamicDailyBudget();
+  const pct=Math.min(spent/Math.max(daily,0.01),1);
+
+  document.getElementById('day-spent-val').textContent=fmtMoney(spent);
+  document.getElementById('day-budget-val').textContent=fmtMoney(daily);
+
+  const badge=document.getElementById('day-badge');
+  if(spent===0){badge.className='dsh-badge ok';badge.textContent='✨ No spend';}
+  else if(spent>daily){badge.className='dsh-badge over';badge.textContent='⚠ Over budget';}
+  else{badge.className='dsh-badge ok';badge.textContent='✓ Under budget';}
+
+  const hero=document.getElementById('day-hero');
+  hero.style.setProperty('--hero-glow',spent>daily?'#ff5c5c10':spent===0?'#3dd68c10':'#f5a62310');
+
+  const bar=document.getElementById('day-bar');
+  bar.style.width=(pct*100).toFixed(1)+'%';
+  bar.className='bar-fill '+(pct===0?'ok':pct>=1?'over':pct>0.8?'warn':'ok');
+
+  // No spend toggle
+  updateNsToggle(
+    document.getElementById('day-ns-toggle'),
+    document.getElementById('day-ns-icon'),
+    document.getElementById('day-ns-title'),
+    document.getElementById('day-ns-sub'),
+    document.getElementById('day-ns-check'),
+    ds
+  );
+
+  // Category breakdown
+  const txs=state.transactions.filter(t=>t.date===ds);
+  const bycat={};txs.forEach(t=>{bycat[t.category]=(bycat[t.category]||0)+t.amount;});
+  const maxCat=Math.max(...Object.values(bycat),1);
+  const bd=document.getElementById('day-cat-breakdown');
+  bd.innerHTML='';
+  if(!Object.keys(bycat).length){
+    bd.innerHTML='<div class="empty-state" style="padding:12px 0">No category data</div>';
+  }else{
+    Object.entries(bycat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{
+      const c=state.categories.find(c=>c.name===cat)||{emoji:'📦',name:cat};
+      const row=document.createElement('div');row.className='cat-row';
+      row.innerHTML=`<span class="cr-icon">${c.emoji}</span><span class="cr-name">${c.name}</span><div class="cr-bar"><div class="cr-bar-fill" style="width:${(amt/maxCat*100).toFixed(1)}%"></div></div><span class="cr-amt">${fmtMoney(amt)}</span>`;
+      bd.appendChild(row);
+    });
+  }
+
+  const list=document.getElementById('day-tx-list');
+  list.innerHTML=txs.length===0?'<div class="empty-state"><div class="empty-icon">📋</div>No transactions</div>':'';
+  txs.forEach(t=>list.appendChild(makeTxEl(t,true)));
+}
+
+// ── WEEK ───────────────────────────────────────────────────
+function renderWeek(){
+  const now=new Date(),dow=now.getDay()===0?6:now.getDay()-1;
+  const monday=new Date(now);monday.setDate(now.getDate()-dow);
+  const days=[];for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d);}
+  const todayStr=today();
+  const daily=getDynamicDailyBudget();
+
+  let totalSpent=0,nsCount=0,overCount=0;
+  days.forEach(d=>{
+    const ds=fmtDate(d);
+    if(ds<=todayStr){
+      const s=getSpentOnDate(ds);totalSpent+=s;
+      if(s===0&&state.noSpendDays.includes(ds))nsCount++;
+      if(s>daily)overCount++;
+    }
+  });
+
+  document.getElementById('week-range-label').textContent=
+    fmt(monday)+' – '+fmt(days[6]);
+
+  document.getElementById('week-kpis').innerHTML=`
+    <div class="kpi-card"><div class="kv">${fmtMoney(totalSpent)}</div><div class="kl">Spent</div></div>
+    <div class="kpi-card"><div class="kv" style="color:var(--green)">${nsCount}</div><div class="kl">No spend</div></div>
+    <div class="kpi-card"><div class="kv" style="color:var(--accent)">${fmtMoney(daily)}</div><div class="kl">Daily now</div></div>
+  `;
+
+  const grid=document.getElementById('week-days');grid.innerHTML='';
+  const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const maxSpend=Math.max(...days.map(d=>getSpentOnDate(fmtDate(d))),daily,1);
+
+  days.forEach((d,i)=>{
+    const ds=fmtDate(d),isFuture=ds>todayStr,spent=getSpentOnDate(ds);
+    const isToday=ds===todayStr,isNS=!isFuture&&spent===0&&state.noSpendDays.includes(ds);
+    const isOver=!isFuture&&spent>daily&&!isNS;
+    const barW=isFuture?0:Math.min((spent/maxSpend)*100,100);
+    const barColor=isOver?'var(--red)':isNS?'var(--green)':'var(--accent)';
+
+    let tagHtml='';
+    if(isNS)tagHtml='<div class="wr-tag ns">no spend</div>';
+    else if(isOver)tagHtml='<div class="wr-tag ov">over</div>';
+    else if(isFuture)tagHtml='<div class="wr-tag future">upcoming</div>';
+    else tagHtml='<div class="wr-tag ok">logged</div>';
+
+    let cls='week-row';
+    if(isToday)cls+=' today-row';
+    else if(isNS)cls+=' nospend-row';
+    else if(isOver)cls+=' over-row';
+
+    const row=document.createElement('div');row.className=cls;
+    row.onclick=()=>{currentDayStr=ds;switchView('day');};
+    row.innerHTML=`
+      <div class="wr-day">
+        <div class="wr-dayname">${dayNames[i]}</div>
+        <div class="wr-date" style="${isToday?'color:var(--accent)':''}">${d.getDate()}</div>
+      </div>
+      <div class="wr-body">
+        <div class="wr-bar-wrap">
+          <div class="bar-track" style="height:4px"><div class="bar-fill" style="background:${barColor};width:${barW}%"></div></div>
+        </div>
+        <div class="wr-label">${isFuture?'—':fmtMoney(spent)}</div>
+      </div>
+      <div class="wr-right">${tagHtml}</div>
+    `;
+    grid.appendChild(row);
+  });
+}
+
+// ── MONTH ──────────────────────────────────────────────────
+function renderMonth(){
+  const{start,end}=getPeriod();
+  const days=getDaysInPeriod(),todayStr=today();
+  const periodSpend=getPeriodSpend();
+  const monthRem=state.budget-periodSpend;
+  const pct=Math.max(0,monthRem/state.budget);
+  const daily=getDynamicDailyBudget();
+
+  document.getElementById('month-rem-val').textContent=fmtMoney(monthRem);
+  document.getElementById('month-rem-pct').textContent=Math.round(pct*100)+'%';
+  document.getElementById('month-rem-sub').textContent=fmtMoney(periodSpend)+' spent of '+fmtMoney(state.budget);
+  const mbar=document.getElementById('month-bar');
+  mbar.style.width=(pct*100).toFixed(1)+'%';
+  mbar.className='bar-fill '+(pct>0.3?'ok':pct>0.1?'warn':'over');
+
+  const elapsed=days.filter(d=>fmtDate(d)<=todayStr);
+  const avg=periodSpend/Math.max(1,elapsed.length);
+  const nsCount=getNoSpendCount();
+  const overCount=elapsed.filter(d=>getSpentOnDate(fmtDate(d))>daily).length;
+  const catTotals={};
+  state.transactions.filter(t=>{const d=parseDate(t.date);return d>=start&&d<=end;}).forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+t.amount;});
+  const topCat=Object.entries(catTotals).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('month-kpis').innerHTML=`
+    <div class="mkpi"><div class="mkpi-label">Avg daily spend</div><div class="mkpi-val">${fmtMoney(avg)}</div><div class="mkpi-sub">this period</div></div>
+    <div class="mkpi"><div class="mkpi-label">No spend days</div><div class="mkpi-val" style="color:var(--green)">${nsCount}</div><div class="mkpi-sub">of ${elapsed.length} elapsed</div></div>
+    <div class="mkpi"><div class="mkpi-label">Over budget days</div><div class="mkpi-val" style="color:var(--red)">${overCount}</div><div class="mkpi-sub">days exceeded</div></div>
+    <div class="mkpi"><div class="mkpi-label">Top category</div><div class="mkpi-val" style="font-size:16px">${topCat?(state.categories.find(c=>c.name===topCat[0])?.emoji||'📦')+' '+topCat[0]:'—'}</div><div class="mkpi-sub">${topCat?fmtMoney(topCat[1]):'no spend yet'}</div></div>
+  `;
+
+  const cl=document.getElementById('month-cat-list');cl.innerHTML='';
+  const maxCat=Math.max(...Object.values(catTotals),1);
+  Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{
+    const c=state.categories.find(c=>c.name===cat)||{emoji:'📦'};
+    const row=document.createElement('div');row.className='cl-row';
+    row.innerHTML=`<span class="cl-icon">${c.emoji}</span><span class="cl-name">${cat}</span><div class="cl-bar"><div class="cl-fill" style="width:${(amt/maxCat*100).toFixed(1)}%"></div></div><span class="cl-amt">${fmtMoney(amt)}</span>`;
+    cl.appendChild(row);
+  });
+  if(!Object.keys(catTotals).length)cl.innerHTML='<div class="empty-state">No transactions yet</div>';
+
+  const dots=document.getElementById('month-dots');dots.innerHTML='';
+  days.forEach(d=>{
+    const ds=fmtDate(d),spent=getSpentOnDate(ds),isFuture=ds>todayStr,isToday=ds===todayStr;
+    const isNS=!isFuture&&spent===0&&state.noSpendDays.includes(ds);
+    const pd=document.createElement('div');
+    pd.className='pd'+(isFuture?' future':isNS?' nospend':spent>0?' spent':'')+(isToday?' today':'');
+    pd.textContent=d.getDate();
+    pd.title=fmt(d)+': '+(isFuture?'upcoming':isNS?'no spend':fmtMoney(spent));
+    pd.onclick=()=>{currentDayStr=ds;switchView('day');};
+    dots.appendChild(pd);
+  });
+}
+
+// ── SETTINGS ───────────────────────────────────────────────
+function renderSettings(){
+  const stPd=document.getElementById('st-payday');
+  if(!stPd.options.length)populatePaydaySelect(stPd);
+  stPd.value=state.payday;
+  document.getElementById('st-budget').value=state.budget.toFixed(2);
+  document.getElementById('st-notif-time').value=state.notifTime;
+
+  const nextPay=getNextPayday();
+  document.getElementById('st-payday-sub').textContent='Next: '+fmtLong(nextPay);
+
+  const granted=Notification?.permission==='granted';
+  const banner=document.getElementById('notif-banner');
+  banner.innerHTML=granted
+    ?'🔔 Notifications active — you\'ll be reminded at <strong>'+state.notifTime+'</strong> to log each day.'
+    :'Tap below to enable daily reminders at <strong>'+state.notifTime+'</strong>.';
+
+  const chips=document.getElementById('cat-chips');chips.innerHTML='';
+  state.categories.forEach((cat,i)=>{
+    const chip=document.createElement('div');chip.className='cat-chip';
+    chip.innerHTML=`${cat.emoji} ${cat.name} <span class="cc-del" onclick="deleteCategory(${i})">×</span>`;
+    chips.appendChild(chip);
+  });
+}
+
+function getNextPayday(){
+  const now=new Date(),yr=now.getFullYear(),mo=now.getMonth();
+  const thisPay=actualPayday(yr,mo,state.payday);
+  return now<=thisPay?thisPay:actualPayday(mo===11?yr+1:yr,mo===11?0:mo+1,state.payday);
+}
+function saveSetting(key,val){
+  if(key==='payday')state.payday=parseInt(val);
+  else if(key==='budget')state.budget=parseFloat(val);
+  else if(key==='notifTime')state.notifTime=val;
+  saveState();renderSettings();scheduleNotifications();
+}
+function cycleEmoji(){emojiIdx=(emojiIdx+1)%EMOJIS.length;document.getElementById('emoji-pick').textContent=EMOJIS[emojiIdx];}
+function addCategory(){
+  const name=document.getElementById('new-cat-name').value.trim();
+  if(!name)return;
+  state.categories.push({name,emoji:document.getElementById('emoji-pick').textContent});
+  document.getElementById('new-cat-name').value='';
+  saveState();renderSettings();
+}
+function deleteCategory(i){state.categories.splice(i,1);saveState();renderSettings();}
+function confirmReset(){if(confirm('Reset all data? This cannot be undone.')){localStorage.removeItem('nospend2_state');location.reload();}}
+
+// ── Transactions ────────────────────────────────────────────
+let selectedCategory=null;
+function makeTxEl(t,showDelete){
+  const cat=state.categories.find(c=>c.name===t.category)||{emoji:'📦',name:t.category};
+  const el=document.createElement('div');el.className='tx-item';
+  el.innerHTML=`
+    <div class="tx-cat-icon">${cat.emoji}</div>
+    <div class="tx-detail">
+      <div class="tx-name">${t.desc||t.category}</div>
+      <div class="tx-meta">${cat.name}</div>
+    </div>
+    <div class="tx-amount">${fmtMoney(t.amount)}</div>
+    ${showDelete?`<button class="tx-delete" onclick="deleteTransaction('${t.id}')">🗑</button>`:''}
+  `;
+  return el;
+}
+function deleteTransaction(id){state.transactions=state.transactions.filter(t=>t.id!==id);saveState();renderAll();}
+
+function openAddTx(dateStr){
+  selectedCategory=null;
+  document.getElementById('tx-amount').value='';
+  document.getElementById('tx-desc').value='';
+  document.getElementById('tx-date').value=dateStr||today();
+  renderCatGrid();
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(()=>document.getElementById('tx-amount').focus(),350);
+}
+function renderCatGrid(){
+  const grid=document.getElementById('tx-cat-grid');grid.innerHTML='';
+  state.categories.forEach(cat=>{
+    const btn=document.createElement('button');
+    btn.className='cat-sel-btn'+(selectedCategory===cat.name?' selected':'');
+    btn.innerHTML=cat.emoji+' '+cat.name;
+    btn.onclick=()=>{selectedCategory=cat.name;renderCatGrid();};
+    grid.appendChild(btn);
+  });
+}
+function closeModal(){document.getElementById('modal-add').classList.remove('open');}
+function saveTransaction(){
+  const amount=parseFloat(document.getElementById('tx-amount').value);
+  const desc=document.getElementById('tx-desc').value.trim();
+  const date=document.getElementById('tx-date').value;
+  if(!amount||amount<=0){alert('Please enter an amount.');return;}
+  if(!selectedCategory){alert('Please select a category.');return;}
+  if(!date){alert('Please select a date.');return;}
+  // Adding a transaction to a no-spend day removes the no-spend mark
+  const nsIdx=state.noSpendDays.indexOf(date);
+  if(nsIdx>=0)state.noSpendDays.splice(nsIdx,1);
+  state.transactions.push({
+    id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    date,amount,desc:desc||selectedCategory,category:selectedCategory
+  });
+  saveState();closeModal();renderAll();
+}
+
+// ── Notifications ───────────────────────────────────────────
+function requestNotifOnFirstLaunch(){
+  if(!('Notification'in window))return;
+  if(Notification.permission==='default')setTimeout(()=>requestNotifPermission(),3000);
+}
+async function requestNotifPermission(){
+  if(!('Notification'in window)){alert('Notifications not supported on this browser.');return;}
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){scheduleNotifications();alert('Notifications enabled! Reminders at '+state.notifTime+' each day.');}
+  else alert('Notifications not granted. Enable in device Settings > Notifications.');
+  renderSettings();
+}
+let notifTimer=null;
+function scheduleNotifications(){
+  if(Notification?.permission!=='granted')return;
+  if(notifTimer)clearTimeout(notifTimer);
+  const now=new Date(),[h,m]=state.notifTime.split(':').map(Number);
+  const target=new Date(now);target.setHours(h,m,0,0);
+  if(target<=now)target.setDate(target.getDate()+1);
+  notifTimer=setTimeout(()=>{fireNotification();scheduleNotifications();},target-now);
+}
+function fireNotification(){
+  const spent=getSpentOnDate(today()),daily=getDynamicDailyBudget();
+  const body=spent===0?'✨ No spend yet — confirm your no spend day in the app.':'You\'ve spent '+fmtMoney(spent)+' today (budget: '+fmtMoney(daily)+'). Log anything you missed.';
+  new Notification('NoSpend',{body,icon:'💸'});
+}
+
+// ── Init ────────────────────────────────────────────────────
+(function init(){
+  loadState();
+  if(isSetup()){showShell();scheduleNotifications();}
+  document.getElementById('modal-add').addEventListener('click',function(e){if(e.target===this)closeModal();});
+})();
+</script>
+</body>
+</html>
